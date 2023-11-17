@@ -2,6 +2,8 @@ using QRCoder;
 using System.Diagnostics;
 using System.IO.Compression;
 using Emgu.CV;
+using Image = System.Drawing.Image;
+using IronBarCode;
 
 namespace YTQRStorage
 {
@@ -12,7 +14,6 @@ namespace YTQRStorage
         string outputdir;
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public Form1()
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             InitializeComponent();
         }
@@ -210,6 +211,21 @@ namespace YTQRStorage
             }
         }
 
+        static string ReadQRCode(string imagePath)
+        {
+            var myOptionsExample = new BarcodeReaderOptions
+            {
+                Speed = ReadingSpeed.Balanced,
+                ExpectMultipleBarcodes = false,
+                ExpectBarcodeTypes = BarcodeEncoding.All,
+                Multithreaded = true,
+                MaxParallelThreads = 19
+            };
+            BarcodeResults result = BarcodeReader.Read(imagePath, myOptionsExample);
+            string[] values = result.Values();
+            return values[0];
+        }
+
         private void button6_Click(object sender, EventArgs e)
         {
             int i = 1;
@@ -223,12 +239,16 @@ namespace YTQRStorage
                     {
                         video.Retrieve(img);
 #pragma warning disable CS8604 // Possible null reference argument.
-                        var filename = Path.Combine(fi.DirectoryName, $"{i}.png");
-#pragma warning restore CS8604 // Possible null reference argument.
+                        var filename = Path.Combine(fi.DirectoryName, $"qr_{i}.png");
                         CvInvoke.Imwrite(filename, img);
                         i++;
                     }
                 }
+            }
+            DirectoryInfo di = new DirectoryInfo(fi.DirectoryName);
+            foreach (FileInfo filei in di.GetFiles("qr_*.png"))
+            {
+                ReadQRCode(filei.FullName);
             }
             label3.Visible = true;
         }

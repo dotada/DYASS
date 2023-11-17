@@ -1,4 +1,8 @@
-﻿namespace YTQRStorage
+﻿using Point = System.Drawing.Point;
+using Size = System.Drawing.Size;
+using SizeF = System.Drawing.SizeF;
+
+namespace YTQRStorage
 {
     partial class Form1
     {
