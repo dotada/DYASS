@@ -1,7 +1,7 @@
 using QRCoder;
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Net;
+using Emgu.CV;
 
 namespace YTQRStorage
 {
@@ -10,7 +10,9 @@ namespace YTQRStorage
 
         string filePath;
         string outputdir;
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public Form1()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             InitializeComponent();
         }
@@ -55,29 +57,7 @@ namespace YTQRStorage
                 }
             }
         }
-        /*
-        private void button2_Click(object sender, EventArgs e)
-        {
-            int img = 0;
-            SplitFile(filePath, 2000, outputdir);
-            string[] files;
-            files = Directory.GetFiles(outputdir, "chunk_*.bin");
-            foreach (string file in files)
-            {
-                string contents = File.ReadAllText(file);
-                QRCodeGenerator qrGenerator = new QRCodeGenerator();
-                QRCodeData qrCodeData = qrGenerator.CreateQrCode(contents, QRCodeGenerator.ECCLevel.L);
-                QRCode qrCode = new QRCode(qrCodeData);
-                using (Bitmap qrCodeImage = qrCode.GetGraphic(20))
-                {
-                    qrCodeImage.Save(Path.Combine(outputdir, $"qr_{img}.png"));
-                }
-                img++;
-            }
-            label1.Visible = true;
-        }
-        */
-        private void button2_Click(object sender, EventArgs e)
+        private async void button2_Click(object sender, EventArgs e)
         {
             int img = 0;
             SplitFile(filePath, 2953, outputdir);
@@ -99,7 +79,32 @@ namespace YTQRStorage
                     qrCodeImage.Save(Path.Combine(outputdir, $"qr_{currentIndex}.png"));
                 }
             });
-
+            HttpClient client = new();
+            string rsp = await client.GetStringAsync("https://www.gyan.dev/ffmpeg/builds/release-version");
+            string pth = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DYASS");
+            string filepth = Path.Combine(pth, $"ffmpeg-{rsp}-full_build");
+            string filepth2 = Path.Combine(filepth, "bin");
+            string ffmpeg = Path.Combine(filepth2, "ffmpeg.exe");
+            Process cmd = new Process();
+            cmd.StartInfo.FileName = "cmd.exe";
+            cmd.StartInfo.RedirectStandardInput = true;
+            cmd.StartInfo.RedirectStandardOutput = true;
+            cmd.StartInfo.CreateNoWindow = true;
+            cmd.StartInfo.UseShellExecute = false;
+            cmd.Start();
+            cmd.StandardInput.WriteLine($"{ffmpeg} -framerate 60 -start_number 1 -i {outputdir}\\qr_%d.png -c:v libx264 -pix_fmt yuv420p -fps_mode passthrough {outputdir}\\output.mp4");
+            cmd.StandardInput.Flush();
+            cmd.StandardInput.Close();
+            cmd.WaitForExit();
+            DirectoryInfo di = new DirectoryInfo(outputdir);
+            foreach (FileInfo file in di.GetFiles("chunk_*.bin"))
+            {
+                file.Delete();
+            }
+            foreach (FileInfo file in di.GetFiles("qr_*.png"))
+            {
+                file.Delete();
+            }
             label1.Visible = true;
         }
 
@@ -118,6 +123,7 @@ namespace YTQRStorage
                     {
                         File.Delete(file);
                     }
+                    Debug.WriteLine(outputdir);
                 }
             }
         }
@@ -137,13 +143,14 @@ namespace YTQRStorage
                 {
                     file.Delete();
                 }
-                foreach (DirectoryInfo dir  in di.GetDirectories())
+                foreach (DirectoryInfo dir in di.GetDirectories())
                 {
                     dir.Delete(true);
                 }
                 label2.Text = "FFMPEG Not installed!";
                 button4.Enabled = true;
-            } else
+            }
+            else
             {
                 label2.Text = "FFMPEG Installed!";
                 button4.Enabled = false;
@@ -184,6 +191,46 @@ namespace YTQRStorage
                 ZipFile.ExtractToDirectory(filepth, pth, true);
                 label2.Text = "FFMPEG Installed.";
             }
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.RestoreDirectory = true;
+                openFileDialog.Filter = "All files (*.*)|*.*";
+                openFileDialog.FilterIndex = 2;
+
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    //Get the path of specified file
+                    filePath = openFileDialog.FileName;
+                    textBox3.Text = filePath;
+                }
+            }
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            int i = 1;
+            string file = textBox3.Text;
+            FileInfo fi = new FileInfo(file);
+            using (var video = new VideoCapture(file))
+            {
+                using (var img = new Mat())
+                {
+                    while (video.Grab())
+                    {
+                        video.Retrieve(img);
+#pragma warning disable CS8604 // Possible null reference argument.
+                        var filename = Path.Combine(fi.DirectoryName, $"{i}.png");
+#pragma warning restore CS8604 // Possible null reference argument.
+                        CvInvoke.Imwrite(filename, img);
+                        i++;
+                    }
+                }
+            }
+            label3.Visible = true;
         }
     }
 }
