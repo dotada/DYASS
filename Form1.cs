@@ -2,10 +2,6 @@ using QRCoder;
 using System.Diagnostics;
 using System.IO.Compression;
 using Emgu.CV;
-using Image = System.Drawing.Image;
-//using IronBarCode;
-using ZXing;
-using System.Text;
 using ZXing.Windows.Compatibility;
 
 namespace YTQRStorage
