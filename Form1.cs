@@ -77,8 +77,9 @@ namespace YTQRStorage
                 using (Bitmap qrCodeImage = qrCode.GetGraphic(20))
                 {
                     // Use Interlocked to safely increment img in a multithreaded environment
-                    int currentIndex = Interlocked.Increment(ref img);
-                    qrCodeImage.Save(Path.Combine(outputdir, $"qr_{currentIndex}.png"));
+                    //int currentIndex = Interlocked.Increment(ref img);
+                    img++;
+                    qrCodeImage.Save(Path.Combine(outputdir, $"qr_{img}.png"));
                 }
             }
             //});
