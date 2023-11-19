@@ -3,7 +3,10 @@ using System.Diagnostics;
 using System.IO.Compression;
 using Emgu.CV;
 using Image = System.Drawing.Image;
-using IronBarCode;
+//using IronBarCode;
+using ZXing;
+using System.Text;
+using ZXing.Windows.Compatibility;
 
 namespace YTQRStorage
 {
@@ -211,19 +214,30 @@ namespace YTQRStorage
             }
         }
 
-        static string ReadQRCode(string imagePath)
+        static byte[] ReadQRCode(string imagePath)
         {
-            var myOptionsExample = new BarcodeReaderOptions
+            var barcodeReader = new BarcodeReader();
+            try
             {
-                Speed = ReadingSpeed.Balanced,
-                ExpectMultipleBarcodes = false,
-                ExpectBarcodeTypes = BarcodeEncoding.All,
-                Multithreaded = true,
-                MaxParallelThreads = 19
-            };
-            BarcodeResults result = BarcodeReader.Read(imagePath, myOptionsExample);
-            string[] values = result.Values();
-            return values[0];
+                using (FileStream stream = new FileStream(imagePath, FileMode.Open))
+                {
+                    using (Bitmap bitmap = new Bitmap(stream))
+                    {
+                        var result = barcodeReader.Decode(bitmap);
+
+                        if (result != null)
+                        {
+                            return result.RawBytes;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error reading QR code: {ex.Message}");
+            }
+
+            return Array.Empty<byte>();
         }
 
         private void button6_Click(object sender, EventArgs e)
@@ -245,11 +259,30 @@ namespace YTQRStorage
                     }
                 }
             }
+            i = 1;
             DirectoryInfo di = new DirectoryInfo(fi.DirectoryName);
             foreach (FileInfo filei in di.GetFiles("qr_*.png"))
             {
-                ReadQRCode(filei.FullName);
+                FileStream fs = File.Create(Path.Combine(di.FullName, $"chunk_{i}.bin"));
+                byte[] values = ReadQRCode(filei.FullName);
+                fs.Write(values);
+                fs.Close();
+                i++;
             }
+            FileStream finalfile = File.Create(Path.Combine(di.FullName, "final.png"));
+            foreach (FileInfo filei in di.GetFiles("chunk_*.bin"))
+            {
+                byte[] buffer = Array.Empty<byte>();
+                using (FileStream fs = filei.OpenRead())
+                {
+                    buffer = new byte[fs.Length];
+                    fs.Read(buffer, 0, buffer.Length);
+                }
+
+                finalfile.Write(buffer);
+                filei.Delete();
+            }
+            finalfile.Close();
             label3.Visible = true;
         }
     }
