@@ -60,16 +60,18 @@ namespace YTQRStorage
         private async void button2_Click(object sender, EventArgs e)
         {
             int img = 0;
-            SplitFile(filePath, 2953, outputdir);
+            SplitFile(filePath, 1273, outputdir);
             string[] files = Directory.GetFiles(outputdir, "chunk_*.bin");
-            int maxDegreeOfParallelism = Environment.ProcessorCount - 1;
-            ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = maxDegreeOfParallelism };
+            //int maxDegreeOfParallelism = Environment.ProcessorCount - 1;
+            //ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = maxDegreeOfParallelism };
             // Use Parallel.ForEach to process files in parallel
-            Parallel.ForEach(files, options, (file) =>
+            //Parallel.ForEach(files, options, (file) =>
+            //{
+            foreach (var file in files)
             {
                 byte[] buffer = File.ReadAllBytes(file);
                 QRCodeGenerator qrGenerator = new QRCodeGenerator();
-                QRCodeData qrCodeData = qrGenerator.CreateQrCode(buffer, QRCodeGenerator.ECCLevel.L);
+                QRCodeData qrCodeData = qrGenerator.CreateQrCode(buffer, QRCodeGenerator.ECCLevel.H);
                 QRCode qrCode = new QRCode(qrCodeData);
 
                 using (Bitmap qrCodeImage = qrCode.GetGraphic(20))
@@ -78,7 +80,8 @@ namespace YTQRStorage
                     int currentIndex = Interlocked.Increment(ref img);
                     qrCodeImage.Save(Path.Combine(outputdir, $"qr_{currentIndex}.png"));
                 }
-            });
+            }
+            //});
             HttpClient client = new();
             string rsp = await client.GetStringAsync("https://www.gyan.dev/ffmpeg/builds/release-version");
             string pth = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DYASS");
@@ -92,7 +95,7 @@ namespace YTQRStorage
             cmd.StartInfo.CreateNoWindow = true;
             cmd.StartInfo.UseShellExecute = false;
             cmd.Start();
-            cmd.StandardInput.WriteLine($"{ffmpeg} -framerate 60 -start_number 1 -i {outputdir}\\qr_%d.png -c:v libx264 -pix_fmt yuv420p -fps_mode passthrough {outputdir}\\output.mp4");
+            cmd.StandardInput.WriteLine($"{ffmpeg} -framerate 1 -start_number 1 -i {outputdir}\\qr_%d.png -c:v libx264 -pix_fmt yuv420p -fps_mode passthrough {outputdir}\\output.mp4");
             cmd.StandardInput.Flush();
             cmd.StandardInput.Close();
             cmd.WaitForExit();
@@ -123,7 +126,6 @@ namespace YTQRStorage
                     {
                         File.Delete(file);
                     }
-                    Debug.WriteLine(outputdir);
                 }
             }
         }
@@ -230,7 +232,7 @@ namespace YTQRStorage
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error reading QR code: {ex.Message}");
+                Debug.WriteLine($"Error reading QR code: {ex.Message}");
             }
 
             return Array.Empty<byte>();
