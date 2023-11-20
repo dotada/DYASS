@@ -19,26 +19,22 @@ namespace YTQRStorage
 
         static void CombineChunks(string inputDirectory)
         {
-            using (FileStream outputStream = new FileStream(Path.Combine(inputDirectory, "final.png"), FileMode.Create, FileAccess.Write))
+            using (FileStream outputStream = new(Path.Combine(inputDirectory, "final.png"), FileMode.Create, FileAccess.Write))
             {
                 int index = 1;
                 string chunkFileName = Path.Combine(inputDirectory, $"chunk_{index}.bin");
-
-                while (File.Exists(chunkFileName))
+                while(File.Exists(chunkFileName))
                 {
-                    using (FileStream inputStream = new FileStream(chunkFileName, FileMode.Open, FileAccess.Read))
+                    using (FileStream inputStream = new(chunkFileName, FileMode.Open, FileAccess.Read))
                     {
                         byte[] buffer = new byte[inputStream.Length];
                         inputStream.Read(buffer, 0, buffer.Length);
                         outputStream.Write(buffer, 0, buffer.Length);
                     }
-
                     index++;
                     chunkFileName = Path.Combine(inputDirectory, $"chunk_{index}.bin");
                 }
             }
-
-            Console.WriteLine("File has been reassembled successfully.");
         }
 
         static void SplitFile(string inputFile, string outputDirectory, int chunkSize)
@@ -287,6 +283,14 @@ namespace YTQRStorage
                 i++;
             }
             CombineChunks(di.FullName);
+            foreach(FileInfo fi2 in di.GetFiles("chunk_*.bin"))
+            {
+                fi2.Delete();
+            }
+            foreach(FileInfo fi2 in di.GetFiles("qr_*.png"))
+            {
+                fi2.Delete();
+            }
             label3.Visible = true;
         }
     }
