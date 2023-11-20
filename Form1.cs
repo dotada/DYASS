@@ -1,12 +1,8 @@
-﻿using QRCoder;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO.Compression;
-using Emgu.CV;
-using ZXing.Windows.Compatibility;
-using System.Security.Cryptography;
 using ZXing;
-using static System.Windows.Forms.Design.AxImporter;
-using ZXing.Common;
+using IronBarCode;
+using BarcodeReader = ZXing.Windows.Compatibility.BarcodeReader;
 
 namespace YTQRStorage
 {
@@ -25,8 +21,8 @@ namespace YTQRStorage
         {
             using (FileStream outputStream = new FileStream(Path.Combine(inputDirectory, "final.png"), FileMode.Create, FileAccess.Write))
             {
-                int index = 0;
-                string chunkFileName = Path.Combine(inputDirectory, $"chunk_{index+1}.bin");
+                int index = 1;
+                string chunkFileName = Path.Combine(inputDirectory, $"chunk_{index}.bin");
 
                 while (File.Exists(chunkFileName))
                 {
@@ -55,7 +51,7 @@ namespace YTQRStorage
                 int index = 0;
                 while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
                 {
-                    string chunkFileName = Path.Combine(outputDirectory, $"chunk_{index+1}.bin");
+                    string chunkFileName = Path.Combine(outputDirectory, $"chunk_{index}.bin");
                     using (FileStream outputFile = new FileStream(chunkFileName, FileMode.Create, FileAccess.Write))
                     {
                         outputFile.Write(buffer, 0, bytesRead);
@@ -86,27 +82,19 @@ namespace YTQRStorage
         }
         private void button2_Click(object sender, EventArgs e)
         {
-            int img = 0;
-            SplitFile(filePath, outputdir, 1273);
+            int img = 1;
+            SplitFile(filePath, outputdir, 1200);
             string[] files = Directory.GetFiles(outputdir, "chunk_*.bin");
             //int maxDegreeOfParallelism = Environment.ProcessorCount - 1;
             //ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = maxDegreeOfParallelism };
             //Parallel.ForEach(files, options, (file) =>
             //{
-            foreach (var file in files)
-            {
-                byte[] buffer = File.ReadAllBytes(file);
-                QRCodeGenerator qrGenerator = new QRCodeGenerator();
-                QRCodeData qrCodeData = qrGenerator.CreateQrCode(buffer, QRCodeGenerator.ECCLevel.H);
-                QRCode qrCode = new QRCode(qrCodeData);
-
-                using (Bitmap qrCodeImage = qrCode.GetGraphic(20))
+                foreach (var file in files)
                 {
-                    //int currentIndex = Interlocked.Increment(ref img);
-                    img++;
-                    qrCodeImage.Save(Path.Combine(outputdir, $"qr_{img}.png"));
+                byte[] buffer = File.ReadAllBytes(file);
+                QRCodeWriter.CreateQrCode(buffer, 500, QRCodeWriter.QrErrorCorrectionLevel.Highest, 0).SaveAsImage(Path.Combine(outputdir, $"qr_{img}.png"));
+                img++;
                 }
-            }
             //});
             string pth = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DYASS");
             string filepth = Path.Combine(pth, $"ffmpeg-{rsp}-full_build");
@@ -119,7 +107,7 @@ namespace YTQRStorage
             cmd.StartInfo.CreateNoWindow = true;
             cmd.StartInfo.UseShellExecute = false;
             cmd.Start();
-            cmd.StandardInput.WriteLine($"{ffmpeg} -framerate 1 -start_number 1 -i {outputdir}\\qr_%d.png -c:v libx264 -pix_fmt yuv420p -fps_mode passthrough {outputdir}\\output.mp4");
+            cmd.StandardInput.WriteLine($"{ffmpeg} -framerate 60 -start_number 1 -i {outputdir}\\qr_%d.png -c copy -pix_fmt yuv420p -fps_mode passthrough {outputdir}\\output.mp4");
             cmd.StandardInput.Flush();
             cmd.StandardInput.Close();
             cmd.WaitForExit();
@@ -253,9 +241,9 @@ namespace YTQRStorage
 
         private void button6_Click(object sender, EventArgs e)
         {
-            int i = 1;
             string file = textBox3.Text;
             FileInfo fi = new(file);
+            /*
             using (var video = new VideoCapture(file))
             {
                 using (var img = new Mat())
@@ -264,14 +252,32 @@ namespace YTQRStorage
                     {
                         video.Retrieve(img);
 #pragma warning disable CS8604 // Possible null reference argument.
-                        var filename = Path.Combine(fi.DirectoryName, $"qr_{i}.png");
+                        var filename = Path.Combine(fi.DirectoryName, $"qr_{i}.bmp");
                         CvInvoke.Imwrite(filename, img);
                         i++;
                     }
                 }
             }
-            i = 1;
+            */
+            int i = 1;
+#pragma warning disable CS8604 // Possible null reference argument.
             DirectoryInfo di = new(fi.DirectoryName);
+#pragma warning restore CS8604 // Possible null reference argument.
+            string pth = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DYASS");
+            string filepth = Path.Combine(pth, $"ffmpeg-{rsp}-full_build");
+            string filepth2 = Path.Combine(filepth, "bin");
+            string ffmpeg = Path.Combine(filepth2, "ffmpeg.exe");
+            Process cmd = new Process();
+            cmd.StartInfo.FileName = "cmd.exe";
+            cmd.StartInfo.RedirectStandardInput = true;
+            cmd.StartInfo.RedirectStandardOutput = true;
+            cmd.StartInfo.CreateNoWindow = true;
+            cmd.StartInfo.UseShellExecute = false;
+            cmd.Start();
+            cmd.StandardInput.WriteLine($"{ffmpeg} -i {file} -r 1/1 -c copy {Path.Combine(di.FullName, "qr_%08d.png")}");
+            cmd.StandardInput.Flush();
+            cmd.StandardInput.Close();
+            cmd.WaitForExit();
             foreach (FileInfo filei in di.GetFiles("qr_*.png"))
             {
                 FileStream fs = File.Create(Path.Combine(di.FullName, $"chunk_{i}.bin"));
@@ -283,53 +289,5 @@ namespace YTQRStorage
             CombineChunks(di.FullName);
             label3.Visible = true;
         }
-        /*
-        private void button7_Click(object sender, EventArgs e)
-        {
-            FileStream fs = File.OpenRead(filePath);
-            byte[] buffer = new byte[fs.Length];
-            fs.Read(buffer, 0, (int)fs.Length);
-            QRCodeGenerator qrGenerator = new QRCodeGenerator();
-            QRCodeData qrCodeData = qrGenerator.CreateQrCode(buffer, QRCodeGenerator.ECCLevel.Q);
-            QRCode qrCode = new QRCode(qrCodeData);
-
-            using (Bitmap qrCodeImage = qrCode.GetGraphic(20))
-            {
-                qrCodeImage.Save(Path.Combine(outputdir, $"qr.png"));
-            }
-            var barcodeReader = new BarcodeReader();
-            try
-            {
-                using (FileStream stream = new FileStream(Path.Combine(outputdir, "qr.png"), FileMode.Open))
-                {
-                    using (Bitmap bitmap = new Bitmap(stream))
-                    {
-                        var result = barcodeReader.Decode(bitmap);
-
-                        if (result != null)
-                        {
-                            using (FileStream stream2 = new FileStream(Path.Combine(outputdir, "res.png"), FileMode.Create))
-                            {
-                                stream2.Write(buffer, 0, buffer.Length);
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error reading QR code: {ex.Message}");
-            }
-        }
-        */
-
-        /*
-        private void button7_Click(object sender, EventArgs e)
-        {
-            SplitFile(filePath, outputdir, 1273);
-            DirectoryInfo di = new(outputdir);
-            CombineChunks(di.FullName);
-        }
-        */
     }
 }

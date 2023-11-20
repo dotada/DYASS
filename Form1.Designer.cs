@@ -174,6 +174,8 @@ namespace YTQRStorage
             Controls.Add(textBox1);
             Controls.Add(button1);
             FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
+            MinimizeBox = false;
             Name = "Form1";
             Text = "FileToYt";
             Load += Form1_LoadAsync;
