@@ -3,7 +3,6 @@ using System.IO.Compression;
 using ZXing;
 using IronBarCode;
 using BarcodeReader = ZXing.Windows.Compatibility.BarcodeReader;
-using System.Text;
 
 namespace YTQRStorage
 {
@@ -232,22 +231,6 @@ namespace YTQRStorage
         {
             string file = textBox3.Text;
             FileInfo fi = new(file);
-            /*
-            using (var video = new VideoCapture(file))
-            {
-                using (var img = new Mat())
-                {
-                    while (video.Grab())
-                    {
-                        video.Retrieve(img);
-#pragma warning disable CS8604 // Possible null reference argument.
-                        var filename = Path.Combine(fi.DirectoryName, $"qr_{i}.bmp");
-                        CvInvoke.Imwrite(filename, img);
-                        i++;
-                    }
-                }
-            }
-            */
             int i = 1;
 #pragma warning disable CS8604 // Possible null reference argument.
             DirectoryInfo di = new(fi.DirectoryName);
