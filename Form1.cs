@@ -23,7 +23,7 @@ namespace YTQRStorage
             {
                 int index = 1;
                 string chunkFileName = Path.Combine(inputDirectory, $"chunk_{index}.bin");
-                while(File.Exists(chunkFileName))
+                while (File.Exists(chunkFileName))
                 {
                     using (FileStream inputStream = new(chunkFileName, FileMode.Open, FileAccess.Read))
                     {
@@ -44,7 +44,7 @@ namespace YTQRStorage
                 byte[] buffer = new byte[chunkSize];
                 int bytesRead;
 
-                int index = 0;
+                int index = 1;
                 while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
                 {
                     string chunkFileName = Path.Combine(outputDirectory, $"chunk_{index}.bin");
@@ -85,12 +85,12 @@ namespace YTQRStorage
             //ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = maxDegreeOfParallelism };
             //Parallel.ForEach(files, options, (file) =>
             //{
-                foreach (var file in files)
-                {
+            foreach (var file in files)
+            {
                 byte[] buffer = File.ReadAllBytes(file);
                 QRCodeWriter.CreateQrCode(buffer, 500, QRCodeWriter.QrErrorCorrectionLevel.Highest, 0).SaveAsImage(Path.Combine(outputdir, $"qr_{img}.png"));
                 img++;
-                }
+            }
             //});
             string pth = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DYASS");
             string filepth = Path.Combine(pth, $"ffmpeg-{rsp}-full_build");
@@ -259,11 +259,11 @@ namespace YTQRStorage
                 i++;
             }
             CombineChunks(di.FullName);
-            foreach(FileInfo fi2 in di.GetFiles("chunk_*.bin"))
+            foreach (FileInfo fi2 in di.GetFiles("chunk_*.bin"))
             {
                 fi2.Delete();
             }
-            foreach(FileInfo fi2 in di.GetFiles("qr_*.png"))
+            foreach (FileInfo fi2 in di.GetFiles("qr_*.png"))
             {
                 fi2.Delete();
             }
@@ -273,6 +273,12 @@ namespace YTQRStorage
             data = data.Skip(4).ToArray();
             using FileStream outputStream = new(Path.Combine(di.FullName, "final.png"), FileMode.Create, FileAccess.Write);
             outputStream.Write(data, 0, data.Length);
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+            SplitFile(textBox3.Text, textBox2.Text, 1024);
+            CombineChunks(textBox2.Text);
         }
     }
 }
