@@ -288,10 +288,8 @@ namespace YTQRStorage
             label3.Visible = true;
             byte[] data = File.ReadAllBytes(Path.Combine(di.FullName, "final.png"));
             data = data.Skip(4).ToArray();
-            using (FileStream outputStream = new(Path.Combine(di.FullName, "final.png"), FileMode.Create, FileAccess.Write))
-            {
-                outputStream.Write(data, 0, data.Length);
-            }
+            using FileStream outputStream = new(Path.Combine(di.FullName, "final.png"), FileMode.Create, FileAccess.Write);
+            outputStream.Write(data, 0, data.Length);
         }
     }
 }
