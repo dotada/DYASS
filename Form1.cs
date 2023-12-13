@@ -3,6 +3,7 @@ using System.IO.Compression;
 using ZXing;
 using IronBarCode;
 using BarcodeReader = ZXing.Windows.Compatibility.BarcodeReader;
+using System.Text;
 
 namespace YTQRStorage
 {
@@ -140,14 +141,23 @@ namespace YTQRStorage
 
         private async void Form1_LoadAsync(object sender, EventArgs e)
         {
+            System.Net.ServicePointManager.DefaultConnectionLimit = 1000;
             HttpClient client = new HttpClient();
             string extrsp = await client.GetStringAsync("https://www.gyan.dev/ffmpeg/builds/release-version");
             rsp = extrsp;
             string appdata = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DYASS");
+            if (!Directory.Exists(appdata))
+            {
+                Directory.CreateDirectory(appdata);
+            }
             string ffmpegdir = Path.Combine(appdata, $"ffmpeg-{rsp}-full_build");
+            if (!Directory.Exists(ffmpegdir))
+            {
+                Directory.CreateDirectory(ffmpegdir);
+            }
             string ffmpegbin1 = Path.Combine(ffmpegdir, "bin");
             string ffmpegbin = Path.Combine(ffmpegbin1, "ffmpeg.exe");
-            if (!Directory.Exists(appdata) || !Directory.Exists(ffmpegdir) || !File.Exists(ffmpegbin))
+            if (!File.Exists(ffmpegbin))
             {
                 DirectoryInfo di = new DirectoryInfo(appdata);
                 foreach (FileInfo file in di.GetFiles())
@@ -170,37 +180,20 @@ namespace YTQRStorage
 
         private async void button4_Click(object sender, EventArgs e)
         {
+            label2.Text = "Downloading.";
             HttpClient client = new HttpClient();
-            if (!Directory.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DYASS")))
+            string pth = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DYASS");
+            string url = $"https://github.com/GyanD/codexffmpeg/releases/download/{rsp}/ffmpeg-{rsp}-full_build.zip";
+            string filepth = Path.Combine(pth, $"ffmpeg-{rsp}-full_build.zip");
+            Uri uri = new Uri(url);
+            Stream filestream = await client.GetStreamAsync(uri);
+            using (FileStream outputFileStream = new FileStream(filepth, FileMode.Create))
             {
-                Directory.CreateDirectory(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DYASS"));
-                string pth = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DYASS");
-                string url = $"https://github.com/GyanD/codexffmpeg/releases/download/{rsp}/ffmpeg-{rsp}-full_build.zip";
-                string filepth = Path.Combine(pth, $"ffmpeg-{rsp}-full_build.zip");
-                Uri uri = new Uri(url);
-                Stream filestream = await client.GetStreamAsync(uri);
-                using (FileStream outputFileStream = new FileStream(filepth, FileMode.Create))
-                {
-                    await filestream.CopyToAsync(outputFileStream);
-                }
-                ZipFile.ExtractToDirectory(filepth, pth, true);
-                File.Delete(filepth);
-                label2.Text = "FFMPEG Installed.";
+                await filestream.CopyToAsync(outputFileStream);
             }
-            else
-            {
-                string pth = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DYASS");
-                string url = $"https://github.com/GyanD/codexffmpeg/releases/download/{rsp}/ffmpeg-{rsp}-full_build.zip";
-                string filepth = Path.Combine(pth, $"ffmpeg-{rsp}-full_build.zip");
-                Uri uri = new Uri(url);
-                Stream filestream = await client.GetStreamAsync(uri);
-                using (FileStream outputFileStream = new FileStream(filepth, FileMode.Create))
-                {
-                    await filestream.CopyToAsync(outputFileStream);
-                }
-                ZipFile.ExtractToDirectory(filepth, pth, true);
-                label2.Text = "FFMPEG Installed.";
-            }
+            label2.Text = "Extracting.";
+            ZipFile.ExtractToDirectory(filepth, pth, true);
+            label2.Text = "FFMPEG Installed.";
         }
 
         private void button5_Click(object sender, EventArgs e)
@@ -291,7 +284,14 @@ namespace YTQRStorage
             {
                 fi2.Delete();
             }
+
             label3.Visible = true;
+            byte[] data = File.ReadAllBytes(Path.Combine(di.FullName, "final.png"));
+            data = data.Skip(4).ToArray();
+            using (FileStream outputStream = new(Path.Combine(di.FullName, "final.png"), FileMode.Create, FileAccess.Write))
+            {
+                outputStream.Write(data, 0, data.Length);
+            }
         }
     }
 }
